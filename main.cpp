@@ -1,4 +1,7 @@
 #include <bits/stdc++.h>
+
+#include <chrono>
+#include <iostream>
 #include "HypervolumeIndicator.h"
 using namespace std;
 /*
@@ -8,26 +11,18 @@ using namespace std;
    a[0]={1,2,2};
    a[1]={2,1,2};
  * */
-double hv3Dv2(vector<vector<double>> &points1, vector<double> &refPoint){
-		if (points1.empty()) return 0.0;
-//		std::sort(points.begin(), points.end(),
-//					[] (vector<double> const& x, vector<double> const& y)
-//					{ return (x[2] < y[2]); }
-//				);
-		map<double, pair<double, double > >points; //z,x,y,...
-		for(auto i:points1)points[i[2]]=make_pair(i[0], i[1]);
+double hv3Dv2(set<pair<double, pair<double, double> > > &points){
+		if (points.empty()) return 0.0;
 		// add the first point
 		std::map<double, double> front2D;
-		vector<double>artifitialx={0, refPoint[1], -1};
-		vector<double>artifitialy={refPoint[0], 0, -1};
+		double inf = std::numeric_limits<double>::max();//inf can be more costly to work with!
+		vector<double>artifitialx={-inf, 0, -inf};
+		vector<double>artifitialy={0, -inf, -inf};
 		front2D[artifitialx[0]] = artifitialx[1];
 		front2D[artifitialy[0]] = artifitialy[1];
-//		front2D[points[0][0]]=points[0][1];
-		//double prev_x2 = points[0][2];
 		double prev_x2 = points.begin()->first;
 		double area = 0;//(refPoint[0] - points[0][0]) * (refPoint[1] - points[0][1]);
 		double volume = 0.0;
-
 		// process further points
 		for( auto point:points){
 			auto right= front2D.lower_bound(point.second.first);
@@ -48,8 +43,7 @@ double hv3Dv2(vector<vector<double>> &points1, vector<double> &refPoint){
 			prev_x2=point.first;
 		}
 		// add trailing chunk to volume
-		volume += area * (refPoint[2] - prev_x2);
-
+		volume += area * (-prev_x2);
 		// return the result
 		return volume;
 }
@@ -123,8 +117,34 @@ double hv3D(vector<vector<double>> &points, vector<double> &refPoint){
 		// return the result
 		return volume;
 }
-void bnp3D(vector<vector<double> > &points, vector<double> &reference){
-
+vector<vector<double> > bnp3D(vector<vector<double> > inpoints, vector<double> &reference, int S){
+   vector<vector<double> > outpoints;
+   set< pair<double, pair<double, double > > >points;
+   for(int t = 0; t < S; t++){
+	pair<double, int> maxctr(0.0, -1);
+	for(int i = 0; i < inpoints.size(); i++){
+	   auto element=make_pair(inpoints[i][2]-reference[2], make_pair(inpoints[i][0]-reference[0], inpoints[i][1]-reference[1]));
+	   auto pos=points.insert(element);
+	   maxctr= max(maxctr, make_pair(hv3Dv2(points), i));
+	   points.erase(pos.first);
+        }
+	   auto element=make_pair(inpoints[maxctr.second][2]-reference[2], make_pair(inpoints[maxctr.second][0]-reference[0], inpoints[maxctr.second][1]-reference[1]));
+	   auto pos=points.insert(element);
+       outpoints.push_back(inpoints[maxctr.second]); 
+       iter_swap(inpoints.begin()+maxctr.second, inpoints.end()-1);
+       inpoints.pop_back();
+   }
+   return outpoints;
+}
+vector<vector<double> > lala(vector<vector<double> > &inpoints, vector<double> &reference, int S){
+   vector<vector<double> > outpoints;
+   set<pair<double, pair<double, double > > >points;
+	for(int i = 0; i < inpoints.size(); i++){
+	   auto element=make_pair(inpoints[i][2]-reference[2], make_pair(inpoints[i][0]-reference[0], inpoints[i][1]-reference[1]));
+	   points.insert(element);
+	}
+	cout << hv3Dv2(points);
+   return outpoints;
 }
 ////////////////////////////////////////////////////////////7
 int nobj=3, N;
@@ -136,30 +156,47 @@ vector<vector<double> >newpoints(int n, int m){
    	  double x2=rand()/(double)RAND_MAX;
    //	  points[i][0]=x1;
    //	  points[i][1]=1.0-pow(x1, 1.5);
-//            points[i][0] = cos(M_PI*x1*0.5)*cos(M_PI*x2*0.5);
-//            points[i][1] = cos(M_PI*x1*0.5)*sin(M_PI*x2*0.5);
-//            points[i][2] = sin(M_PI*x1*0.5);
-     points[i][0] = x1*x2;
-     points[i][1] = x1*(1.0-x2);
-     points[i][2] = (1.0-x1);
+            points[i][0] = cos(M_PI*x1*0.5)*cos(M_PI*x2*0.5);
+            points[i][1] = cos(M_PI*x1*0.5)*sin(M_PI*x2*0.5);
+            points[i][2] = sin(M_PI*x1*0.5);
+//     points[i][0] = x1*x2;
+//     points[i][1] = x1*(1.0-x2);
+//     points[i][2] = (1.0-x1);
      }
      return points;
 }
+ostream &operator<<(ostream &os, vector<vector<double> >&points){
+   for(auto x:points){
+     for(auto xi:x)
+	os<< xi<<" ";
+     os <<endl;
+   }
+   return os;
+}
 int main(){
-   auto a=newpoints(10000, 3);
-   vector<double> ref(3, 1.1);
- //  vector<vector<double> >a;
- //  a.push_back({1,0,0});
- //  a.push_back({0,10,0});
- //  a.push_back({0,0,10});
- //  a.push_back({10,0,1});
- //  a.push_back({0,0,10});
-//   for(auto x:a){
-//     for(auto xi:x)
-//	cout << xi<<" ";
-//     cout <<endl;
-//   }
-   cout << hv3D(a, ref)<<endl;
-   cout << hv3Dv2(a, ref)<<endl;
-  // cout << hv3Dv3(a, ref)<<endl;
+using std::chrono::high_resolution_clock;
+    using std::chrono::duration_cast;
+    using std::chrono::duration;
+    using std::chrono::milliseconds;
+   auto a=newpoints(1000, 3);
+//   cout << a <<endl;
+   vector<double> ref(3, 10);
+   cout << a <<endl;
+//  cout << hv3D(a,ref);
+//  exit(0);
+  auto t1 = high_resolution_clock::now();
+//  for(int i = 0; i < 250; i++){
+//   auto b=bnp3D(a, ref, 100);
+//   cout << b<<endl;
+ // }
+    auto t2 = high_resolution_clock::now();
+
+    auto ms_int = duration_cast<milliseconds>(t2 - t1);
+duration<double, std::milli> ms_double = t2 - t1;
+
+  //  std::cout << ms_int.count() << "ms\n";
+  //  std::cout << ms_double.count() << "ms";
+//   cout <<b<<endl;
+//   cout << hv3D(a, ref)<<endl;
+//   cout << hv3Dv2(a, ref)<<endl;
 }
